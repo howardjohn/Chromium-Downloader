@@ -12,9 +12,9 @@ saveDir = 'C:\\Program Files\\Chromium\\'
 
 def getLatestVersion():
     verSite = ('http://build.chromium.org/f/chromium/snapshots/' +
-            'chromium-rel-xp/LATEST')
+            'Win/LATEST')
     re, ver = h.request(verSite)
-    ver = str(ver)
+    ver = str(ver, encoding='utf8')
     return ver
 
 
@@ -33,7 +33,7 @@ def delBackup():
 
 
 def downloadChromium(ver):
-    site = ('http://build.chromium.org/buildbot/snapshots/chromium-rel-xp/'
+    site = ('http://build.chromium.org/buildbot/snapshots/Win/'
             + ver + '/chrome-win32.zip')
     re, chrome = h.request(site)
     file = open(saveDir + 'latest.zip', 'wb')
