@@ -2,17 +2,13 @@ from zipfile import ZipFile
 from os import rename, remove
 from shutil import rmtree, copytree
 from httplib2 import Http
-from msvcrt import getch
 from sys import argv, exit
-from easygui import *
-
-h = Http('.cache')
-saveDir = 'C:\\Program Files\\Chromium\\'
+import easygui
 
 
 def getLatestVersion():
     verSite = ('http://build.chromium.org/f/chromium/snapshots/' +
-            'chromium-rel-xp/LATEST')
+            'Win/LATEST')
     re, ver = h.request(verSite)
     ver = str(ver, encoding='utf8')
     return ver
@@ -33,7 +29,7 @@ def delBackup():
 
 
 def downloadChromium(ver):
-    site = ('http://build.chromium.org/buildbot/snapshots/chromium-rel-xp/'
+    site = ('http://build.chromium.org/buildbot/snapshots/Win/'
             + ver + '/chrome-win32.zip')
     re, chrome = h.request(site)
     file = open(saveDir + 'latest.zip', 'wb')
@@ -62,7 +58,7 @@ def backup():
 def gui():
     ver = getLatestVersion()
     choices = ['Download version %s' % ver, 'Backup', 'Revert', 'Exit']
-    choice = indexbox('What do you want to do?',
+    choice = easygui.indexbox('What do you want to do?',
             'Chromium Downloader', choices)
     if choice == 0:
         delCurrent()
@@ -117,4 +113,7 @@ def main():
         backup()
 
 if __name__ == "__main__":
+
+    h = Http('.cache')
+    saveDir = 'C:\\Program Files\\Chromium\\'
     main()
