@@ -1,119 +1,107 @@
-from zipfile import ZipFile
-from os import rename, remove
+import zipfile
+from os import rename, remove, path, environ
 from shutil import rmtree, copytree
-from httplib2 import Http
+import httplib2
 from sys import argv, exit
 import easygui
 
 
-def getLatestVersion():
-    verSite = ('http://build.chromium.org/f/chromium/snapshots/' +
-            'Win/LATEST')
-    re, ver = h.request(verSite)
-    ver = str(ver, encoding='utf8')
-    return ver
+SAVE_DIR = path.join(environ["ProgramFiles"], 'Chromium\\')
 
 
-def delCurrent():
-    try:
-        rmtree(saveDir + 'Current')
-    except Exception:
-        print('Chromium could not be removed.')
+def get_latest_version():
+    connection = httplib2.Http('.cache')
+    verSite = ('http://build.chromium.org/f/chromium/snapshots/Win/LATEST')
+    return connection.request(verSite)[1].decode('utf8')
 
 
-def delBackup():
-    try:
-        rmtree(saveDir + 'Backup')
-    except Exception:
-        print('Backup could not be removed.')
+def del_current():
+    if path.exists(path.join(SAVE_DIR, 'Current')):
+        rmtree(path.join(SAVE_DIR, 'Current'))
 
 
-def downloadChromium(ver):
-    site = ('http://build.chromium.org/buildbot/snapshots/Win/'
-            + ver + '/chrome-win32.zip')
-    re, chrome = h.request(site)
-    file = open(saveDir + 'latest.zip', 'wb')
-    file.write(chrome)
-    file.close()
+def del_backup():
+    if path.exists(path.join(SAVE_DIR, 'Backup')):
+        rmtree(path.join(SAVE_DIR, 'Backup'))
+
+
+def download_chromium(ver):
+    connection = httplib2.Http('.cache')
+    site = 'http://build.chromium.org/buildbot/snapshots/Win/' \
+            '%s/chrome-win32.zip' % ver
+    re, chrome = connection.request(site)
+    with open(path.join(SAVE_DIR, 'latest.zip'), 'wb') as zfile:
+        zfile.write(chrome)
 
 
 def unzip():
-    zip = ZipFile(saveDir + 'latest.zip', 'r')
-    zip.extractall(saveDir)
-    rename(saveDir + 'chrome-win32', saveDir + 'Current')
-    zip.close()
-    remove(saveDir + 'latest.zip')
+    with zipfile.ZipFile(SAVE_DIR + 'latest.zip', 'r') as zip:
+        zip.extractall(SAVE_DIR)
+    rename(path.join(SAVE_DIR, 'chrome-win32'), path.join(SAVE_DIR, 'Current'))
+    remove(path.join(SAVE_DIR, 'latest.zip'))
 
 
 def revert():
-    delCurrent()
-    copytree(saveDir + 'Backup', saveDir + 'Current')
+    del_current()
+    copytree(path.join(SAVE_DIR, 'Backup'), path.join(SAVE_DIR, 'Current'))
 
 
 def backup():
-    delBackup()
-    copytree(saveDir + 'Current', saveDir + 'Backup')
+    del_backup()
+    copytree(path.join(SAVE_DIR, 'Current'), path.join(SAVE_DIR, 'Backup'))
 
 
 def gui():
-    ver = getLatestVersion()
+    ver = get_latest_version()
     choices = ['Download version %s' % ver, 'Backup', 'Revert', 'Exit']
-    choice = easygui.indexbox('What do you want to do?',
-            'Chromium Downloader', choices)
-    if choice == 0:
-        delCurrent()
-        downloadChromium(ver)
-        unzip()
-    elif choice == 1:
-        backup()
-    elif choice == 2:
-        revert()
-    elif choice == 3:
-        exit()
-    gui()
-
+    while True:
+        choice = easygui.indexbox('What do you want to do?',
+                'Chromium Downloader', choices)
+        if choice == 0:
+            del_current()
+            download_chromium(ver)
+            unzip()
+        elif choice == 1:
+            backup()
+        elif choice == 2:
+            revert()
+        elif choice == 3:
+            break
 
 def usage():
     print('-h         Display help text\n' +
-            '-g         Launches the GUI Program\n' +
-            '-v         Only gets the version\n' +
-            '-r         Reverts to last backup\n' +
-            '-b         Saves a new backup\n' +
-            '-d         Specify save directory\n' +
-            '-o         Specify version to download\n')
+          '-g         Launches the GUI Program\n' +
+          '-v         Only gets the version\n' +
+          '-r         Reverts to last backup\n' +
+          '-b         Saves a new backup\n' +
+          '-o         Specify version to download\n')
 
 
 def main():
-    if '-d' in argv:
-        saveDir = argv.index('-d') + 1
-
     if '-g' in argv:
         gui()
-        exit()
+        return
     elif '-h' in argv:
         usage()
-        exit(2)
+        return 2
     elif '-r' in argv:
         revert()
-        exit()
+        return
 
     if '-o' in argv:
         ver = argv.index('-o') + 1
     else:
-        ver = getLatestVersion()
+        ver = get_latest_version()
         print('Latest Version: ', ver)
     if '-v' in argv:
-        exit()
+        return
 
-    delCurrent()
-    downloadChromium(ver)
+    del_current()
+    download_chromium(ver)
     unzip()
 
     if '-b' in argv:
         backup()
 
 if __name__ == "__main__":
-
-    h = Http('.cache')
-    saveDir = 'C:\\Program Files\\Chromium\\'
-    main()
+    exit(main())
