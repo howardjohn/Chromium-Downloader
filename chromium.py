@@ -1,10 +1,9 @@
 import zipfile
+import httplib2
+import easygui
+from sys import argv, exit
 from os import rename, remove, path, environ
 from shutil import rmtree, copytree
-import httplib2
-from sys import argv, exit
-import easygui
-
 
 SAVE_DIR = path.join(environ["ProgramFiles"], 'Chromium\\')
 
