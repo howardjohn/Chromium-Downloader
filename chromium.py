@@ -1,7 +1,7 @@
 import zipfile
 import httplib2
 import easygui
-from sys import argv, exit
+from sys import argv
 from os import rename, remove, path, environ
 from shutil import rmtree, copytree
 
@@ -38,6 +38,7 @@ def unzip():
         zip.extractall(SAVE_DIR)
     rename(path.join(SAVE_DIR, 'chrome-win32'), path.join(SAVE_DIR, 'Current'))
     remove(path.join(SAVE_DIR, 'latest.zip'))
+    print('Done')
 
 
 def revert():
@@ -67,6 +68,7 @@ def gui():
         elif choice == 3:
             break
 
+
 def usage():
     print('-h         Display help text\n' +
           '-g         Launches the GUI Program\n' +
@@ -82,13 +84,13 @@ def main():
         return
     elif '-h' in argv:
         usage()
-        return 2
+        return
     elif '-r' in argv:
         revert()
         return
 
     if '-o' in argv:
-        ver = argv.index('-o') + 1
+        ver = argv[argv.index('-o') + 1]
     else:
         ver = get_latest_version()
         print('Latest Version: ', ver)
@@ -103,4 +105,4 @@ def main():
         backup()
 
 if __name__ == "__main__":
-    exit(main())
+    main()
