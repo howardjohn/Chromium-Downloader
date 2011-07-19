@@ -53,8 +53,9 @@ def backup():
 
 def gui():
     ver = get_latest_version()
-    choices = ['Download version %s' % ver, 'Backup', 'Revert', 'Exit']
     while True:
+        choices = ['Download version %s' % ver, 'Specify Version',
+                   'Backup', 'Revert', 'Exit']
         choice = easygui.indexbox('What do you want to do?',
                 'Chromium Downloader', choices)
         if choice == 0:
@@ -62,10 +63,13 @@ def gui():
             download_chromium(ver)
             unzip()
         elif choice == 1:
-            backup()
+            ver = easygui.integerbox('Enter desired verson number:',
+                                     'Specify a version', int(ver), 0, 9999999)
         elif choice == 2:
-            revert()
+            backup()
         elif choice == 3:
+            revert()
+        elif choice == 4:
             break
 
 
@@ -88,9 +92,13 @@ def main():
     elif '-r' in argv:
         revert()
         return
+    elif 'b' in argv:
+        backup()
+        return
 
     if '-o' in argv:
         ver = argv[argv.index('-o') + 1]
+        print(ver)
     else:
         ver = get_latest_version()
         print('Latest Version: ', ver)
@@ -100,9 +108,6 @@ def main():
     del_current()
     download_chromium(ver)
     unzip()
-
-    if '-b' in argv:
-        backup()
 
 if __name__ == "__main__":
     main()
