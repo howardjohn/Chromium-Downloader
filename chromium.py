@@ -1,6 +1,7 @@
 import zipfile
 import httplib2
 import easygui
+from lxml.html import fromstring
 from sys import argv
 from os import rename, remove, path, environ
 from shutil import rmtree, copytree
@@ -12,6 +13,14 @@ def get_latest_version():
     connection = httplib2.Http('.cache')
     verSite = ('http://build.chromium.org/f/chromium/snapshots/Win/LATEST')
     return connection.request(verSite)[1].decode('utf8')
+
+
+def get_closest_version(ver):
+    connection = httplib2.Http('.cache')
+    versSite = ('http://build.chromium.org/f/chromium/snapshots/Win/')
+    doc = fromstring(connection.request(versSite)[1].decode('utf8'))
+    return min([int(a.text_content()[:-1]) for a in doc.cssselect('a')
+           if a.text_content()[:-1].isdigit()], key=lambda x: abs(x - ver))
 
 
 def del_current():
@@ -63,8 +72,9 @@ def gui():
             download_chromium(ver)
             unzip()
         elif choice == 1:
-            ver = easygui.integerbox('Enter desired verson number:',
-                                     'Specify a version', int(ver), 0, 9999999)
+            ver = get_closest_version(easygui.integerbox(
+                'Enter desired verson (The closest match will be used):',
+                'Specify a version', int(ver), 0, 999999))
         elif choice == 2:
             backup()
         elif choice == 3:
@@ -83,26 +93,26 @@ def usage():
 
 
 def main():
-    if '-g' in argv:
+    if '-g' in argv[1:]:
         gui()
         return
-    elif '-h' in argv:
+    elif '-h' in argv[1:]:
         usage()
         return
-    elif '-r' in argv:
+    elif '-r' in argv[1:]:
         revert()
         return
-    elif 'b' in argv:
+    elif 'b' in argv[1:]:
         backup()
         return
 
-    if '-o' in argv:
-        ver = argv[argv.index('-o') + 1]
-        print(ver)
+    if '-o' in argv[1:]:
+        ver = get_closest_version(argv[argv.index('-o') + 1])
     else:
         ver = get_latest_version()
-        print('Latest Version: ', ver)
-    if '-v' in argv:
+    print('Latest Version: ', ver)
+
+    if '-v' in argv[1:]:
         return
 
     del_current()
