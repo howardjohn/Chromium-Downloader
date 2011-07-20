@@ -3,7 +3,7 @@ import httplib2
 import easygui
 from lxml.html import fromstring
 from sys import argv
-from os import rename, remove, path, environ
+from os import rename, remove, path, environ, system
 from shutil import rmtree, copytree
 
 SAVE_DIR = path.join(environ["ProgramFiles"], 'Chromium\\')
@@ -23,9 +23,12 @@ def get_closest_version(ver):
            if a.text_content()[:-1].isdigit()], key=lambda x: abs(x - ver))
 
 
-def del_current():
+def del_current(use_gui):
     if path.exists(path.join(SAVE_DIR, 'Current')):
-        rmtree(path.join(SAVE_DIR, 'Current'))
+        try:
+            rmtree(path.join(SAVE_DIR, 'Current'))
+        except WindowsError:
+            close_chromium(use_gui)
 
 
 def del_backup():
@@ -42,22 +45,33 @@ def download_chromium(ver):
         zfile.write(chrome)
 
 
+def close_chromium(use_gui):
+    if not use_gui:
+        if input("Enter an character to close chromium: ")[:-1]:
+            system("taskkill /F /IM chrome.exe > NUL")
+    else:
+        if easygui.ynbox("Do you want to close chromium?"):
+            system("taskkill /F /IM chrome.exe > NUL")
+
+
 def unzip():
-    with zipfile.ZipFile(SAVE_DIR + 'latest.zip', 'r') as zip:
-        zip.extractall(SAVE_DIR)
+    with zipfile.ZipFile(SAVE_DIR + 'latest.zip', 'r') as zipped:
+        zipped.extractall(SAVE_DIR)
     rename(path.join(SAVE_DIR, 'chrome-win32'), path.join(SAVE_DIR, 'Current'))
     remove(path.join(SAVE_DIR, 'latest.zip'))
-    print('Done')
+    print('Download Complete')
 
 
 def revert():
-    del_current()
+    del_current(False)
     copytree(path.join(SAVE_DIR, 'Backup'), path.join(SAVE_DIR, 'Current'))
+    print('Revert Complete')
 
 
 def backup():
     del_backup()
     copytree(path.join(SAVE_DIR, 'Current'), path.join(SAVE_DIR, 'Backup'))
+    print('Backup Complete')
 
 
 def gui():
@@ -68,13 +82,13 @@ def gui():
         choice = easygui.indexbox('What do you want to do?',
                 'Chromium Downloader', choices)
         if choice == 0:
-            del_current()
+            del_current(True)
             download_chromium(ver)
             unzip()
         elif choice == 1:
             ver = get_closest_version(easygui.integerbox(
                 'Enter desired verson (The closest match will be used):',
-                'Specify a version', int(ver), 0, 999999))
+                'Specify a version', int(ver)))
         elif choice == 2:
             backup()
         elif choice == 3:
@@ -102,7 +116,7 @@ def main():
     elif '-r' in argv[1:]:
         revert()
         return
-    elif 'b' in argv[1:]:
+    elif '-b' in argv[1:]:
         backup()
         return
 
@@ -115,7 +129,7 @@ def main():
     if '-v' in argv[1:]:
         return
 
-    del_current()
+    del_current(False)
     download_chromium(ver)
     unzip()
 
