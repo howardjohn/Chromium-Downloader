@@ -2,11 +2,24 @@ import zipfile
 import httplib2
 import easygui
 from lxml.html import fromstring
-from sys import argv
+from sys import argv, version
 from os import rename, remove, path, environ, system
 from shutil import rmtree, copytree
 
-SAVE_DIR = path.join(environ["ProgramFiles"], 'Chromium\\')
+
+class Settings(easygui.EgStore):
+    def __init__(self, filename):
+        self.save_dir = ''
+        
+        self.filename = filename
+        self.restore()
+
+
+settingsFile = path.join('C:\\',
+                   'Python' + version[:3].replace('.', ''), 'chromium.ini')
+settings = Settings(settingsFile)
+settings.save_dir = (settings.save_dir or
+                    path.join(environ["ProgramFiles"], 'Chromium\\'))
 
 
 def get_latest_version():
@@ -24,16 +37,16 @@ def get_closest_version(ver):
 
 
 def del_current(use_gui):
-    if path.exists(path.join(SAVE_DIR, 'Current')):
+    if path.exists(path.join(settings.save_dir, 'Current')):
         try:
-            rmtree(path.join(SAVE_DIR, 'Current'))
+            rmtree(path.join(settings.save_dir, 'Current'))
         except WindowsError:
             close_chromium(use_gui)
 
 
 def del_backup():
-    if path.exists(path.join(SAVE_DIR, 'Backup')):
-        rmtree(path.join(SAVE_DIR, 'Backup'))
+    if path.exists(path.join(settings.save_dir, 'Backup')):
+        rmtree(path.join(settings.save_dir, 'Backup'))
 
 
 def download_chromium(ver):
@@ -41,7 +54,7 @@ def download_chromium(ver):
     site = 'http://build.chromium.org/buildbot/snapshots/Win/' \
             '%s/chrome-win32.zip' % ver
     re, chrome = connection.request(site)
-    with open(path.join(SAVE_DIR, 'latest.zip'), 'wb') as zfile:
+    with open(path.join(settings.save_dir, 'latest.zip'), 'wb') as zfile:
         zfile.write(chrome)
 
 
@@ -55,22 +68,27 @@ def close_chromium(use_gui):
 
 
 def unzip():
-    with zipfile.ZipFile(SAVE_DIR + 'latest.zip', 'r') as zipped:
-        zipped.extractall(SAVE_DIR)
-    rename(path.join(SAVE_DIR, 'chrome-win32'), path.join(SAVE_DIR, 'Current'))
-    remove(path.join(SAVE_DIR, 'latest.zip'))
+    with zipfile.ZipFile(settings.save_dir + 'latest.zip', 'r') as zipped:
+        zipped.extractall(settings.save_dir)
+
+    rename(path.join(settings.save_dir, 'chrome-win32'), 
+           path.join(settings.save_dir, 'Current'))
+
+    remove(path.join(settings.save_dir, 'latest.zip'))
     print('Download Complete')
 
 
 def revert():
     del_current(False)
-    copytree(path.join(SAVE_DIR, 'Backup'), path.join(SAVE_DIR, 'Current'))
+    copytree(path.join(settings.save_dir, 'Backup'), 
+             path.join(settings.save_dir, 'Current'))
     print('Revert Complete')
 
 
 def backup():
     del_backup()
-    copytree(path.join(SAVE_DIR, 'Current'), path.join(SAVE_DIR, 'Backup'))
+    copytree(path.join(settings.save_dir, 'Current'), 
+             path.join(settings.save_dir, 'Backup'))
     print('Backup Complete')
 
 
@@ -78,7 +96,7 @@ def gui():
     ver = get_latest_version()
     while True:
         choices = ['Download version %s' % ver, 'Specify Version',
-                   'Backup', 'Revert', 'Exit']
+                   'Backup', 'Revert', 'Edit Save Dir', 'Exit']
         choice = easygui.indexbox('What do you want to do?',
                 'Chromium Downloader', choices)
         if choice == 0:
@@ -94,6 +112,11 @@ def gui():
         elif choice == 3:
             revert()
         elif choice == 4:
+            settings.save_dir = (easygui.enterbox("New Save Directory", "", "")
+                        or path.join(environ["ProgramFiles"], 'Chromium\\'))
+            settings.store()
+        elif choice == 5:
+            settings.store()
             break
 
 
@@ -120,6 +143,8 @@ def main():
         backup()
         return
 
+    gui()
+
     if '-o' in argv[1:]:
         ver = get_closest_version(argv[argv.index('-o') + 1])
     else:
@@ -129,9 +154,9 @@ def main():
     if '-v' in argv[1:]:
         return
 
-    del_current(False)
-    download_chromium(ver)
-    unzip()
+    #del_current(False)
+    #download_chromium(ver)
+    #unzip()
 
 if __name__ == "__main__":
     main()
