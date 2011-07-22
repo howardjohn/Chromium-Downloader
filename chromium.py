@@ -10,7 +10,8 @@ from shutil import rmtree, copytree
 class Settings(easygui.EgStore):
     def __init__(self, filename):
         self.save_dir = ''
-        
+        self.backup_ver = '0'
+        self.current_ver = '0'
         self.filename = filename
         self.restore()
 
@@ -53,9 +54,12 @@ def download_chromium(ver):
     connection = httplib2.Http('.cache')
     site = 'http://build.chromium.org/buildbot/snapshots/Win/' \
             '%s/chrome-win32.zip' % ver
+    settings.current_ver = ver
+    settings.store()
     re, chrome = connection.request(site)
     with open(path.join(settings.save_dir, 'latest.zip'), 'wb') as zfile:
         zfile.write(chrome)
+    
 
 
 def close_chromium(use_gui):
@@ -85,8 +89,10 @@ def revert():
     print('Revert Complete')
 
 
-def backup():
+def backup(ver):
     del_backup()
+    settings.backup_ver = ver
+    settings.store()
     copytree(path.join(settings.save_dir, 'Current'), 
              path.join(settings.save_dir, 'Backup'))
     print('Backup Complete')
@@ -95,8 +101,9 @@ def backup():
 def gui():
     ver = get_latest_version()
     while True:
-        choices = ['Download version %s' % ver, 'Specify Version',
-                   'Backup', 'Revert', 'Edit Save Dir', 'Exit']
+        choices = ['Download v%s' % ver, 'Specify Version',
+                   'Backup v%s' % settings.current_ver, 'Revert to v%s'
+                    % settings.backup_ver, 'Edit Save Dir', 'Exit']
         choice = easygui.indexbox('What do you want to do?',
                 'Chromium Downloader', choices)
         if choice == 0:
@@ -106,17 +113,16 @@ def gui():
         elif choice == 1:
             ver = get_closest_version(easygui.integerbox(
                 'Enter desired verson (The closest match will be used):',
-                'Specify a version', int(ver)))
+                'Specify a version', int(ver)) or int(ver))
         elif choice == 2:
-            backup()
+            backup(ver)
         elif choice == 3:
             revert()
         elif choice == 4:
             settings.save_dir = (easygui.enterbox("New Save Directory", "", "")
                         or path.join(environ["ProgramFiles"], 'Chromium\\'))
             settings.store()
-        elif choice == 5:
-            settings.store()
+        else:
             break
 
 
@@ -130,6 +136,11 @@ def usage():
 
 
 def main():
+    if '-o' in argv[1:]:
+        ver = get_closest_version(argv[argv.index('-o') + 1])
+    else:
+        ver = get_latest_version()
+        
     if '-g' in argv[1:]:
         gui()
         return
@@ -140,23 +151,17 @@ def main():
         revert()
         return
     elif '-b' in argv[1:]:
-        backup()
+        backup(ver)
         return
 
-    gui()
-
-    if '-o' in argv[1:]:
-        ver = get_closest_version(argv[argv.index('-o') + 1])
-    else:
-        ver = get_latest_version()
     print('Latest Version: ', ver)
 
     if '-v' in argv[1:]:
         return
 
-    #del_current(False)
-    #download_chromium(ver)
-    #unzip()
+    del_current(False)
+    download_chromium(ver)
+    unzip()
 
 if __name__ == "__main__":
     main()
